@@ -1,5 +1,5 @@
 # Working The Amazon EKS Immersion Workshop - Chapter 1 - Deploying A Microservices Application In A Kubernetes Cluster
-**_Achapter by chapter journey from start to finish!_**
+**_A chapter by chapter journey from start to finish!_**
 
 This is shared resources repository related to The Amazon EKS ImmersionWorkshop.
 

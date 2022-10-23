@@ -1,0 +1,409 @@
+NAME: workshop
+LAST DEPLOYED: Sat Oct 22 17:52:44 2022
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+
+COMPUTED VALUES:
+catalog:
+  affinity: {}
+  env:
+  - name: AGG_APP_URL
+    value: http://proddetail.workshop:3000/catalogDetail
+  - name: AWS_XRAY_DAEMON_ADDRESS
+    value: xray-service.default:2000
+  - name: DATABASE_SERVICE_URL
+    value: mysql.workshop
+  fullnameOverride: ""
+  image:
+    pullPolicy: Always
+    repository: public.ecr.aws/u2g6w7p2/eks-workshop-demo/product_catalog
+    tag: "1.0"
+  ingress:
+    annotations: {}
+    enabled: false
+    hosts:
+    - host: prodcatalog.local
+      paths: []
+    tls: []
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    path: /products/ping
+    periodSeconds: 5
+    port: 5000
+    successThreshold: 1
+    timeoutSeconds: 1
+  name: prodcatalog
+  nameOverride: ""
+  namespace: workshop
+  nodeSelector: {}
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    path: /products/ping
+    periodSeconds: 3
+    port: 5000
+    successThreshold: 1
+    timeoutSeconds: 1
+  replicaCount: 1
+  resources: {}
+  service:
+    targetPort: 5000
+    type: ClusterIP
+  serviceAccountName:
+    enabled: false
+  startupProbe:
+    enabled: false
+  tolerations: []
+  volume:
+    enabled: false
+detail:
+  affinity: {}
+  env:
+  - name: AWS_XRAY_DAEMON_ADDRESS
+    value: xray-service.default:2000
+  fullnameOverride: ""
+  image:
+    pullPolicy: Always
+    repository: public.ecr.aws/u2g6w7p2/eks-workshop-demo/catalog_detail
+    tag: "1.0"
+  ingress:
+    annotations: {}
+    enabled: false
+    hosts:
+    - host: proddetail.local
+      paths: []
+    tls: []
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    path: /ping
+    periodSeconds: 5
+    port: 3000
+    successThreshold: 1
+    timeoutSeconds: 1
+  name: proddetail
+  nameOverride: ""
+  namespace: workshop
+  nodeSelector: {}
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    periodSeconds: 3
+    successThreshold: 1
+    timeoutSeconds: 1
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  service:
+    targetPort: 3000
+    type: ClusterIP
+  startupProbe:
+    enabled: false
+  tolerations: []
+frontend:
+  affinity: {}
+  env:
+  - name: BASE_URL
+    value: http://prodcatalog.workshop:5000/products/
+  - name: AWS_XRAY_DAEMON_ADDRESS
+    value: xray-service.default:2000
+  fullnameOverride: ""
+  image:
+    pullPolicy: Always
+    repository: public.ecr.aws/u2g6w7p2/eks-workshop-demo/frontend_node
+    tag: "2.0"
+  ingress:
+    annotations: {}
+    enabled: false
+    hosts:
+    - host: frontend.local
+      paths: []
+    tls: []
+  lbType: alb
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    path: /ping
+    periodSeconds: 5
+    port: 9000
+    successThreshold: 1
+    timeoutSeconds: 1
+  name: frontend
+  nameOverride: ""
+  namespace: workshop
+  nodeSelector: {}
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 5
+    path: /ping
+    periodSeconds: 3
+    port: 9000
+    successThreshold: 1
+    timeoutSeconds: 1
+  replicaCount: 1
+  resources: {}
+  selector:
+    app: frontend
+  service:
+    name: http
+    port: 80
+    targetPort: 9000
+    type: LoadBalancer
+  startupProbe:
+    enabled: false
+  tolerations: []
+
+HOOKS:
+---
+# Source: productcatalog_workshop/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "workshop-productcatalog_workshop-test-connection"
+  labels:
+    app.kubernetes.io/name: productcatalog_workshop
+    helm.sh/chart: productcatalog_workshop-1.0.0
+    app.kubernetes.io/instance: workshop
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args:  ['workshop-productcatalog_workshop:']
+  restartPolicy: Never
+MANIFEST:
+---
+# Source: productcatalog_workshop/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workshop
+---
+# Source: productcatalog_workshop/templates/catalog_service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prodcatalog
+  namespace: workshop
+  labels:
+    app: prodcatalog
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      name: http
+  selector:
+    app: prodcatalog
+---
+# Source: productcatalog_workshop/templates/detail_service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: proddetail
+  namespace: workshop
+  labels:
+    app: proddetail
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      name: http
+  selector:
+    app: proddetail
+---
+# Source: productcatalog_workshop/templates/frontend_service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: workshop
+  labels:
+    app: frontend
+spec:
+  type: LoadBalancer
+  ports:
+    - targetPort: 9000
+      port: 80
+      name: http
+  selector:
+    app: frontend
+---
+# Source: productcatalog_workshop/templates/catalog_deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  prodcatalog
+  namespace: workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prodcatalog
+  template:
+    metadata:
+      labels:
+        app: prodcatalog
+    spec:
+      containers:
+        - name: prodcatalog
+          image: "public.ecr.aws/u2g6w7p2/eks-workshop-demo/product_catalog:1.0"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /products/ping
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /products/ping
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: AGG_APP_URL
+              value: http://proddetail.workshop:3000/catalogDetail
+            - name: AWS_XRAY_DAEMON_ADDRESS
+              value: xray-service.default:2000
+            - name: DATABASE_SERVICE_URL
+              value: mysql.workshop
+          resources:
+            {}
+---
+# Source: productcatalog_workshop/templates/detail_deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  proddetail
+  namespace: workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: proddetail
+  template:
+    metadata:
+      labels:
+        app: proddetail
+    spec:
+      containers:
+        - name: proddetail
+          image: "public.ecr.aws/u2g6w7p2/eks-workshop-demo/catalog_detail:1.0"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - cat readiness.txt | grep ready
+            initialDelaySeconds: 15
+            periodSeconds: 3
+          env:
+            - name: AWS_XRAY_DAEMON_ADDRESS
+              value: xray-service.default:2000
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+---
+# Source: productcatalog_workshop/templates/frontend_deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: '/metrics'
+        prometheus.io/port: '9000'
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "public.ecr.aws/u2g6w7p2/eks-workshop-demo/frontend_node:2.0"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 9000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 9000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 9000
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          env:
+            - name: BASE_URL
+              value: http://prodcatalog.workshop:5000/products/
+            - name: AWS_XRAY_DAEMON_ADDRESS
+              value: xray-service.default:2000
+          resources:
+            {}
+NOTES:
+1. Get the application URL by running these commands:
+     NOTE: It may take a few minutes for the LoadBalancer to be available.
+           You can watch the status of by running 'kubectl get --namespace workshop svc -w frontend'
+  export LB_NAME=$(kubectl get svc --namespace workshop frontend -o jsonpath="{.status.loadBalancer.ingress[*].hostname}")
+  echo http://$LB_NAME:80
